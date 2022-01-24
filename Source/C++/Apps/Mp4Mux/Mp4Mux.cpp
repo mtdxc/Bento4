@@ -310,7 +310,7 @@ CheckDoviInputParameters(AP4_Array<Parameter>& parameters)
 }
 
 /*----------------------------------------------------------------------
-|   SampleFileStorage
+|   SampleFileStorage 创建个临时文件来存储包内容，避免mux时内存过高
 +---------------------------------------------------------------------*/
 class SampleFileStorage
 {
@@ -594,8 +594,7 @@ AddAc3Track(AP4_Movie&             movie,
                 AP4_Dac3Atom::StreamInfo *ac3_stream_info = &frame.m_Info.m_Ac3StreamInfo;
 
                 AP4_Ac3SampleDescription* sample_description =
-                new AP4_Ac3SampleDescription(
-                                             frame.m_Info.m_SampleRate,       // sample rate
+                new AP4_Ac3SampleDescription(frame.m_Info.m_SampleRate,       // sample rate
                                              16,                              // sample size
                                              2,                               // channel count
                                              frame.m_Info.m_FrameSize,        // Access Unit size

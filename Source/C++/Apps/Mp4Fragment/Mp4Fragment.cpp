@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
+#include <map>
 #include "Ap4.h"
 
 /*----------------------------------------------------------------------
@@ -122,17 +122,8 @@ public:
     SampleArray(AP4_Track* track) :
         m_Track(track) {
         m_SampleCount = m_Track->GetSampleCount();
-        if (m_SampleCount) {
-            m_ForcedSync = new bool[m_SampleCount];
-            for (unsigned int i=0; i<m_SampleCount; i++) {
-                m_ForcedSync[i] = false;
-            }
-        } else {
-            m_ForcedSync = NULL;
-        }
     }
     virtual ~SampleArray() {
-        delete[] m_ForcedSync;
     }
 
     virtual AP4_Cardinal GetSampleCount() {
@@ -159,7 +150,7 @@ public:
 protected:
     AP4_Track*   m_Track;
     AP4_Cardinal m_SampleCount;
-    bool*        m_ForcedSync;
+    std::map<int, bool> m_ForcedSync;
 };
 
 /*----------------------------------------------------------------------

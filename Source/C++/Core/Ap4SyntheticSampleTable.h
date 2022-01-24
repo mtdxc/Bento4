@@ -55,8 +55,7 @@ class AP4_SyntheticSampleTable : public AP4_SampleTable
 {
  public:
     // methods
-             AP4_SyntheticSampleTable(AP4_Cardinal chunk_size 
-                                      = AP4_SYNTHETIC_SAMPLE_TABLE_DEFAULT_CHUNK_SIZE);
+    AP4_SyntheticSampleTable(AP4_Cardinal chunk_size = AP4_SYNTHETIC_SAMPLE_TABLE_DEFAULT_CHUNK_SIZE);
     virtual ~AP4_SyntheticSampleTable();
 
     // AP4_SampleTable methods

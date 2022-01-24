@@ -99,9 +99,9 @@ main(int argc, char** argv)
     if (argc < 2) {
         PrintUsageAndExit();
     }
-    const char* filename = NULL;
+    const char* filename = argv[1];
+    /*
     //bool verbose = false;
-
     while (char* arg = *++argv) {
         if (!strcmp(arg, "--verbose")) {
             //verbose = true;
@@ -114,6 +114,7 @@ main(int argc, char** argv)
             }
         }   
     }
+    */
     if (filename == NULL) {
         fprintf(stderr, "ERROR: filename missing\n");
         return 1;
@@ -130,8 +131,8 @@ main(int argc, char** argv)
 
     AP4_AvcNalParser parser;
     unsigned int  nalu_count = 0;
-    for (;;) {
-        bool eos;
+    bool eos = false;
+    while(!eos) {
         unsigned char input_buffer[4096];
         AP4_Size bytes_in_buffer = 0;
         result = input->ReadPartial(input_buffer, sizeof(input_buffer), bytes_in_buffer);
@@ -143,6 +144,7 @@ main(int argc, char** argv)
             fprintf(stderr, "ERROR: failed to read from input file\n");
             break;
         }
+
         AP4_Size offset = 0;
         do {
             const AP4_DataBuffer* nalu = NULL;
@@ -162,7 +164,7 @@ main(int argc, char** argv)
                        (int)nalu->GetDataSize(),
                        nalu_type,
                        nalu_type_name);
-                if (nalu_type == 9) {
+                if (nalu_type == AP4_AVC_NAL_UNIT_TYPE_ACCESS_UNIT_DELIMITER) {
                     unsigned int primary_pic_type = (nalu_payload[1]>>5);
                     const char*  primary_pic_type_name = AP4_AvcNalParser::PrimaryPicTypeName(primary_pic_type);
                     if (primary_pic_type_name == NULL) primary_pic_type_name = "UNKNOWN";
@@ -179,7 +181,6 @@ main(int argc, char** argv)
             offset += bytes_consumed;
             bytes_in_buffer -= bytes_consumed;
         } while (bytes_in_buffer);
-        if (eos) break;
     }
     
     input->Release();

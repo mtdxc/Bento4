@@ -105,23 +105,17 @@ public:
 class TrackSampleReader : public SampleReader
 {
 public:
-    TrackSampleReader(AP4_Track& track) : m_Track(track), m_SampleIndex(0) {}
-    AP4_Result ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data);
+    TrackSampleReader(AP4_Track* track) : m_Track(track), m_SampleIndex(0) {}
+    AP4_Result ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data) {
+        if (m_SampleIndex >= m_Track->GetSampleCount()) return AP4_ERROR_EOS;
+        return m_Track->ReadSample(m_SampleIndex++, sample, sample_data);
+    }
     
 private:
-    AP4_Track&  m_Track;
+    AP4_Track* m_Track;
     AP4_Ordinal m_SampleIndex;
 };
 
-/*----------------------------------------------------------------------
-|   TrackSampleReader
-+---------------------------------------------------------------------*/
-AP4_Result 
-TrackSampleReader::ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data)
-{
-    if (m_SampleIndex >= m_Track.GetSampleCount()) return AP4_ERROR_EOS;
-    return m_Track.ReadSample(m_SampleIndex++, sample, sample_data);
-}
 
 /*----------------------------------------------------------------------
 |   FragmentedSampleReader
@@ -129,25 +123,19 @@ TrackSampleReader::ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data)
 class FragmentedSampleReader : public SampleReader 
 {
 public:
-    FragmentedSampleReader(AP4_LinearReader& fragment_reader, AP4_UI32 track_id) :
+    FragmentedSampleReader(AP4_LinearReader* fragment_reader, AP4_UI32 track_id) :
         m_FragmentReader(fragment_reader), m_TrackId(track_id) {
-        fragment_reader.EnableTrack(track_id);
+        fragment_reader->EnableTrack(track_id);
     }
-    AP4_Result ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data);
+    AP4_Result ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data) {
+        return m_FragmentReader->ReadNextSample(m_TrackId, sample, sample_data);
+    }
     
 private:
-    AP4_LinearReader& m_FragmentReader;
+    AP4_LinearReader* m_FragmentReader;
     AP4_UI32          m_TrackId;
 };
 
-/*----------------------------------------------------------------------
-|   FragmentedSampleReader
-+---------------------------------------------------------------------*/
-AP4_Result 
-FragmentedSampleReader::ReadSample(AP4_Sample& sample, AP4_DataBuffer& sample_data)
-{
-    return m_FragmentReader.ReadNextSample(m_TrackId, sample, sample_data);
-}
 
 /*----------------------------------------------------------------------
 |   OpenOutput
@@ -171,14 +159,14 @@ OpenOutput(const char* filename_pattern, unsigned int segment_number)
 |   ReadSample
 +---------------------------------------------------------------------*/
 static AP4_Result
-ReadSample(SampleReader&   reader, 
-           AP4_Track&      track,
+ReadSample(SampleReader*   reader, 
+           AP4_Track*      track,
            AP4_Sample&     sample,
            AP4_DataBuffer& sample_data, 
            double&         ts,
            bool&           eos)
 {
-    AP4_Result result = reader.ReadSample(sample, sample_data);
+    AP4_Result result = reader->ReadSample(sample, sample_data);
     if (AP4_FAILED(result)) {
         if (result == AP4_ERROR_EOS) {
             eos = true;
@@ -189,7 +177,7 @@ ReadSample(SampleReader&   reader,
     if (sample_data.GetDataSize() == 0) {
         return AP4_ERROR_INVALID_FORMAT;
     }
-    ts = (double)sample.GetDts()/(double)track.GetMediaTimeScale();
+    ts = (double)sample.GetDts()/(double)track->GetMediaTimeScale();
     
     return AP4_SUCCESS;
 }
@@ -228,15 +216,15 @@ WriteSamples(AP4_Mpeg2TsWriter&               writer,
     
     // prime the samples
     if (audio_reader) {
-        result = ReadSample(*audio_reader, *audio_track, audio_sample, audio_sample_data, audio_ts, audio_eos);
+        result = ReadSample(audio_reader, audio_track, audio_sample, audio_sample_data, audio_ts, audio_eos);
         if (AP4_FAILED(result)) goto end;
     }
     if (video_reader) {
-        result = ReadSample(*video_reader, *video_track, video_sample, video_sample_data, video_ts, video_eos);
+        result = ReadSample(video_reader, video_track, video_sample, video_sample_data, video_ts, video_eos);
         if (AP4_FAILED(result)) goto end;
     }
     
-    for (;;) {
+    while (1) {
         bool sync_sample = false;
         AP4_Track* chosen_track= NULL;
         if (audio_track && !audio_eos) {
@@ -255,7 +243,9 @@ WriteSamples(AP4_Mpeg2TsWriter&               writer,
                 sync_sample = true;
             }
         }
-        if (chosen_track == NULL) break;
+        
+        if (chosen_track == NULL)
+            break;
         
         // check if we need to start a new segment
         if (Options.segment_duration && sync_sample) {
@@ -303,7 +293,7 @@ WriteSamples(AP4_Mpeg2TsWriter&               writer,
                                                *output);
             if (AP4_FAILED(result)) return result;
             
-            result = ReadSample(*audio_reader, *audio_track, audio_sample, audio_sample_data, audio_ts, audio_eos);
+            result = ReadSample(audio_reader, audio_track, audio_sample, audio_sample_data, audio_ts, audio_eos);
             if (AP4_FAILED(result)) return result;
             ++audio_sample_count;
         } else if (chosen_track == video_track) {
@@ -314,7 +304,7 @@ WriteSamples(AP4_Mpeg2TsWriter&               writer,
                                                *output);
             if (AP4_FAILED(result)) return result;
 
-            result = ReadSample(*video_reader, *video_track, video_sample, video_sample_data, video_ts, video_eos);
+            result = ReadSample(video_reader, video_track, video_sample, video_sample_data, video_ts, video_eos);
             if (AP4_FAILED(result)) return result;
             ++video_sample_count;
         } else {
@@ -511,7 +501,6 @@ main(int argc, char** argv)
     AP4_File* input_file = new AP4_File(*input, true);
 
     // get the movie
-    AP4_SampleDescription* sample_description;
     AP4_Movie* movie = input_file->GetMovie();
     if (movie == NULL) {
         fprintf(stderr, "ERROR: no movie in file\n");
@@ -540,18 +529,18 @@ main(int argc, char** argv)
     
         if (audio_track) {
             linear_reader->EnableTrack(audio_track->GetId());
-            audio_reader = new FragmentedSampleReader(*linear_reader, audio_track->GetId());
+            audio_reader = new FragmentedSampleReader(linear_reader, audio_track->GetId());
         }
         if (video_track) {
             linear_reader->EnableTrack(video_track->GetId());
-            video_reader = new FragmentedSampleReader(*linear_reader, video_track->GetId());
+            video_reader = new FragmentedSampleReader(linear_reader, video_track->GetId());
         }
     } else {
         if (audio_track) {
-            audio_reader = new TrackSampleReader(*audio_track);
+            audio_reader = new TrackSampleReader(audio_track);
         }
         if (video_track) {
-            video_reader = new TrackSampleReader(*video_track);
+            video_reader = new TrackSampleReader(video_track);
         }
     }
     
@@ -562,7 +551,7 @@ main(int argc, char** argv)
     
     // add the audio stream
     if (audio_track) {
-        sample_description = audio_track->GetSampleDescription(0);
+        AP4_SampleDescription* sample_description = audio_track->GetSampleDescription(0);
         if (sample_description == NULL) {
             fprintf(stderr, "ERROR: unable to parse audio sample description\n");
             goto end;
@@ -599,7 +588,7 @@ main(int argc, char** argv)
     
     // add the video stream
     if (video_track) {
-        sample_description = video_track->GetSampleDescription(0);
+        AP4_SampleDescription* sample_description = video_track->GetSampleDescription(0);
         if (sample_description == NULL) {
             fprintf(stderr, "ERROR: unable to parse video sample description\n");
             goto end;

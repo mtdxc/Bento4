@@ -76,6 +76,8 @@ public:
      * @result: AP4_SUCCESS is the call succeeds, or an error code if it
      * fails.
      * 
+     * 不可以feed同样数据data两次. 当此函数返回，调用方必须检查bytes_consumed，
+     * 下次feed的指针必须前进bytes_consumed字节(此函数一次只消化一个nal)
      * The caller must not feed the same data twice. When this method
      * returns, the caller should inspect the value of bytes_consumed and
      * advance the input stream source accordingly, such that the next

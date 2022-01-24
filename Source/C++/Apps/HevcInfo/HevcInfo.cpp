@@ -64,16 +64,7 @@ main(int argc, char** argv)
     if (argc < 2) {
         PrintUsageAndExit();
     }
-    const char* filename = NULL;
-
-    while (char* arg = *++argv) {
-        if (filename == NULL) {
-            filename = arg;
-        } else {
-            fprintf(stderr, "ERROR: unexpected argument '%s'\n", arg);
-            return 1;
-        }
-    }
+    const char* filename = argv[1];
     if (filename == NULL) {
         fprintf(stderr, "ERROR: filename missing\n");
         return 1;
@@ -90,8 +81,8 @@ main(int argc, char** argv)
 
     AP4_HevcNalParser parser;
     unsigned int  nalu_count = 0;
-    for (;;) {
-        bool eos;
+    bool eos = false;
+    while (!eos) {
         unsigned char input_buffer[4096];
         AP4_Size bytes_in_buffer = 0;
         result = input->ReadPartial(input_buffer, sizeof(input_buffer), bytes_in_buffer);
@@ -103,6 +94,7 @@ main(int argc, char** argv)
             fprintf(stderr, "ERROR: failed to read from input file\n");
             break;
         }
+
         AP4_Size offset = 0;
         do {
             const AP4_DataBuffer* nalu = NULL;
@@ -136,7 +128,6 @@ main(int argc, char** argv)
             offset += bytes_consumed;
             bytes_in_buffer -= bytes_consumed;
         } while (bytes_in_buffer);
-        if (eos) break;
     }
     
     input->Release();

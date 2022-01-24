@@ -64,6 +64,26 @@ The Bento4 SDK includes several command-line applications/tools that are built u
 |mp4-dash	    | creates an MPEG DASH output from one or more MP4 files, including encryption.                                                                   
 |mp4-dash-clone	| creates a local clone of a remote or local MPEG DASH presentation, optionally encrypting the segments as they are cloned.
 
+mp4info         显示有关MP4文件的高级信息，包括所有tracks和codec的详细信息。
+mp4dump         显示MP4文件的整个atom/box结构。
+mp4edit         添加/插入/移除/替换 MP4文件的atom/box项。
+mp4extract      从MP4文件中提取atom/box
+mp4encrypt      加密MP4文件（支持多种加密方案）
+mp4decrypt      解密MP4文件（支持多种加密方案）
+mp4dcfpackager  将媒体文件加密为OMA DCF文件
+mp4compact      将“stsz”表转换为“stz2”表以创建更紧凑的MP4文件
+mp4fragment     从非碎片化的MP4文件创建碎片化MP4文件。
+mp4split        将支离破碎的MP4文件拆分为离散的文件
+mp4tag          显示/编辑MP4元数据（iTunes样式和其他样式）
+mp4mux          将一个或多个基本流（H264/AVC、H265/HEVC、AAC）多路复用到MP4文件中
+mp42aac         从MP4文件中提取原始AAC基本流
+mp42avc         从MP4文件中提取原始AVC/H.264基本流
+mp42hls         将MP4文件转换为HLS（HTTP Live Streaming）演示文稿，包括生成片段和.m3u8播放列表以及AES-128和SAMPLE-AES（用于公平播放）加密。这可以作为苹果mediafilesegmenter工具的替代品。
+mp42ts          将MP4文件转换为MPEG2-TS文件。
+mp4dash         从一个或多个MP4文件（包括加密）创建MPEG破折号输出。作为一种选择，还可以同时生成带有MP4片段的HLS播放列表，允许将单个流用作DASH和HLS。这是一个功能齐全的MPEG DASH/HLS打包机。
+mp4dashclone    创建远程或本地MPEG破折号演示文稿的本地克隆，并在克隆片段时对其进行加密。
+mp4hls          从一个或多个MP4文件创建多比特率HLS主播放列表，包括对加密和仅I帧播放列表的支持。此工具在内部使用“mp42hls”低级工具，因此该低级工具支持的所有选项也都可用。这可以作为苹果variantplaylistcreator工具的替代品。
+
 Building
 --------
 

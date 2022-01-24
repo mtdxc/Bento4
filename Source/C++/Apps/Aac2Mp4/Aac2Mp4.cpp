@@ -123,8 +123,7 @@ main(int argc, char** argv)
                 unsigned char aac_dsi[2];
                 MakeDsi(frame.m_Info.m_SamplingFrequencyIndex, frame.m_Info.m_ChannelConfiguration, aac_dsi);
                 dsi.SetData(aac_dsi, 2);
-                AP4_MpegAudioSampleDescription* sample_description = 
-                    new AP4_MpegAudioSampleDescription(
+                AP4_MpegAudioSampleDescription* sample_description = new AP4_MpegAudioSampleDescription(
                     AP4_OTI_MPEG4_AUDIO,   // object type
                     frame.m_Info.m_SamplingFrequency,
                     16,                    // sample size
@@ -178,7 +177,7 @@ main(int argc, char** argv)
                                      sample_table, 
                                      0,     // track id
                                      sample_rate,       // movie time scale
-                                     sample_count*1024, // track duration              
+                                     sample_count*1024, // track duration
                                      sample_rate,       // media time scale
                                      sample_count*1024, // media duration
                                      "eng", // language

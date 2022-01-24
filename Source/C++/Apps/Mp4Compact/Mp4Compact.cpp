@@ -148,6 +148,7 @@ AP4_CompactingProcessor::TrackHandler::ProcessTrack()
         return AP4_SUCCESS;
     } else {
         if (m_Outer.m_Verbose) {
+            // stsz以4字节存储长度，stz2可以自定义长度字节(1,2)
             unsigned int reduction = (4-field_size)*stsz->GetSampleCount();
             printf("stz2 reduction = %d bytes\n", reduction);
             m_Outer.m_SizeReduction += reduction;
