@@ -73,7 +73,7 @@ mp4decrypt      解密MP4文件（支持多种加密方案）
 mp4dcfpackager  将媒体文件加密为OMA DCF文件
 mp4compact      将“stsz”表转换为“stz2”表以创建更紧凑的MP4文件
 mp4fragment     从非碎片化的MP4文件创建碎片化MP4文件。
-mp4split        将支离破碎的MP4文件拆分为离散的文件
+mp4split        将碎片化的MP4文件拆分为离散文件
 mp4tag          显示/编辑MP4元数据（iTunes样式和其他样式）
 mp4mux          将一个或多个基本流（H264/AVC、H265/HEVC、AAC）多路复用到MP4文件中
 mp42aac         从MP4文件中提取原始AAC基本流

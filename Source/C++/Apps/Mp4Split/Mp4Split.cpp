@@ -94,9 +94,17 @@ PrintUsageAndExit()
 /*----------------------------------------------------------------------
 |   NextFragmentIndex
 +---------------------------------------------------------------------*/
+#if 0
+#include <map>
+std::map<unsigned int, unsigned int> TrackCounters;
+static unsigned int
+NextFragmentIndex(unsigned int track_id)
+{
+    return TrackCounters[track_id]++;
+}
+#else
 AP4_Array<unsigned int> TrackIds;
 AP4_Array<unsigned int> TrackCounters;
-
 static unsigned int
 NextFragmentIndex(unsigned int track_id)
 {
@@ -114,6 +122,7 @@ NextFragmentIndex(unsigned int track_id)
     }
     return TrackCounters[track_index]++;
 }
+#endif
 
 /*----------------------------------------------------------------------
 |   ParseTrackIds
@@ -304,7 +313,8 @@ main(int argc, char** argv)
             return 1;
         }
     }
-    if (Options.track_id_count) {
+    if (Options.track_id_count) 
+    { // 过滤掉不需要的tracker
         AP4_MoovAtom* moov = movie->GetMoovAtom();
         
         // only keep the 'trak' atom that we need

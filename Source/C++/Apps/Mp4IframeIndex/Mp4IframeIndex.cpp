@@ -69,13 +69,12 @@ IndexTrack(AP4_Track& track, const char** separator, AP4_ByteStream* output)
         if (AP4_FAILED(result)) return result;
         
         if (sample.IsSync()) {
-            AP4_Offset offset = sample.GetOffset();
             char workspace[256];
             AP4_FormatString(workspace, sizeof(workspace),
                              "%s{ \"size\": %u, \"offset\": %llu, \"fragmentStart\": 0 }",
                              *separator,
                              (unsigned int)sample.GetSize(),
-                             (unsigned long long)offset);
+                             (unsigned long long)sample.GetOffset());
             *separator = ",\n";
             output->WriteString(workspace);
         }
@@ -106,13 +105,12 @@ IndexFragments(AP4_Movie& movie, unsigned int track_id, AP4_ByteStream* stream, 
             continue;
         }
         if (found_track_id == track_id && sample.IsSync()) {
-            AP4_Offset offset = sample.GetOffset();
             char workspace[256];
             AP4_FormatString(workspace, sizeof(workspace),
                              "%s{ \"size\": %u, \"offset\": %llu, \"fragmentStart\": %llu }",
                              *separator,
                              (unsigned int)sample.GetSize(),
-                             (unsigned long long)offset,
+                             (unsigned long long)sample.GetOffset(),
                              (unsigned long long)reader.GetCurrentFragmentPosition());
             *separator = ",\n";
             output->WriteString(workspace);

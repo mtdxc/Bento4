@@ -115,12 +115,11 @@ strtof(char* s, char** /* end */)
 
 
 /*----------------------------------------------------------------------
-|   SampleArray
+|   SampleArray(normal Mp4)
 +---------------------------------------------------------------------*/
 class SampleArray {
 public:
-    SampleArray(AP4_Track* track) :
-        m_Track(track) {
+    SampleArray(AP4_Track* track) : m_Track(track) {
         m_SampleCount = m_Track->GetSampleCount();
     }
     virtual ~SampleArray() {
@@ -154,12 +153,11 @@ protected:
 };
 
 /*----------------------------------------------------------------------
-|   CachedSampleArray
+|   CachedSampleArray(fMp4)
 +---------------------------------------------------------------------*/
 class CachedSampleArray : public SampleArray {
 public:
-    CachedSampleArray(AP4_Track* track) :
-        SampleArray(track) {}
+    CachedSampleArray(AP4_Track* track) : SampleArray(track) {}
 
     virtual AP4_Cardinal GetSampleCount() {
         return m_Samples.ItemCount();
@@ -186,10 +184,28 @@ protected:
 class TrackCursor
 {
 public:
-    TrackCursor(AP4_Track* track, SampleArray* samples);
-    ~TrackCursor();
+    TrackCursor(AP4_Track* track, SampleArray* samples) :
+        m_Track(track),
+        m_Samples(samples),
+        m_SampleIndex(0),
+        m_FragmentIndex(0),
+        m_Timestamp(0),
+        m_UnscaledTimestamp(0),
+        m_Eos(false),
+        m_Tfra(new AP4_TfraAtom(0))
+    {
+    }
+    ~TrackCursor()
+    {
+        delete m_Tfra;
+        delete m_Samples;
+    }
     
-    AP4_Result    Init();
+    AP4_Result    Init()
+    {
+        return m_Samples->GetSample(0, m_Sample);
+    }
+
     AP4_Result    SetSampleIndex(AP4_Ordinal sample_index);
     
     AP4_Track*    m_Track;
@@ -204,39 +220,6 @@ public:
 };
 
 /*----------------------------------------------------------------------
-|   TrackCursor::TrackCursor
-+---------------------------------------------------------------------*/
-TrackCursor::TrackCursor(AP4_Track* track, SampleArray* samples) :
-    m_Track(track),
-    m_Samples(samples),
-    m_SampleIndex(0),
-    m_FragmentIndex(0),
-    m_Timestamp(0),
-    m_UnscaledTimestamp(0),
-    m_Eos(false),
-    m_Tfra(new AP4_TfraAtom(0))
-{
-}
-
-/*----------------------------------------------------------------------
-|   TrackCursor::~TrackCursor
-+---------------------------------------------------------------------*/
-TrackCursor::~TrackCursor()
-{
-    delete m_Tfra;
-    delete m_Samples;
-}
-
-/*----------------------------------------------------------------------
-|   TrackCursor::Init
-+---------------------------------------------------------------------*/
-AP4_Result
-TrackCursor::Init()
-{
-    return m_Samples->GetSample(0, m_Sample);
-}
-
-/*----------------------------------------------------------------------
 |   TrackCursor::SetSampleIndex
 +---------------------------------------------------------------------*/
 AP4_Result
@@ -246,7 +229,7 @@ TrackCursor::SetSampleIndex(AP4_Ordinal sample_index)
     
     // check if we're at the end
     if (sample_index >= m_Samples->GetSampleCount()) {
-        AP4_UI64 end_dts = m_Sample.GetDts()+m_Sample.GetDuration();
+        AP4_UI64 end_dts = m_Sample.GetDts() + m_Sample.GetDuration();
         m_Sample.Reset();
         m_Sample.SetDts(end_dts);
         m_Eos = true;
@@ -539,7 +522,7 @@ Fragment(AP4_File&                input_file,
                 
                 if (target_dts <= cursor->m_Sample.GetDts()) {
                     // we're still behind, there may have been an alignment/rounding error, just advance by one segment duration
-                    target_dts = cursor->m_Sample.GetDts()+AP4_ConvertTime(fragment_duration,
+                    target_dts = cursor->m_Sample.GetDts() + AP4_ConvertTime(fragment_duration,
                                                                            1000,
                                                                            cursor->m_Track->GetMediaTimeScale());
                 }
@@ -609,8 +592,7 @@ Fragment(AP4_File&                input_file,
 
         // set initial flag values
         AP4_UI32 tfhd_flags = AP4_TFHD_FLAG_DEFAULT_BASE_IS_MOOF | AP4_TFHD_FLAG_SAMPLE_DESCRIPTION_INDEX_PRESENT;
-        AP4_UI32 trun_flags = AP4_TRUN_FLAG_DATA_OFFSET_PRESENT |
-                              AP4_TRUN_FLAG_SAMPLE_SIZE_PRESENT;
+        AP4_UI32 trun_flags = AP4_TRUN_FLAG_DATA_OFFSET_PRESENT | AP4_TRUN_FLAG_SAMPLE_SIZE_PRESENT;
         AP4_UI32 sync_sample_flags = 0;
         AP4_UI32 non_sync_sample_flags = 0x10000; // 0x10000 -> sample_is_non_sync
         if (cursor->m_Track->GetType() == AP4_Track::TYPE_VIDEO ||
@@ -967,8 +949,7 @@ AutoDetectFragmentDuration(TrackCursor* cursor)
             AP4_UI64 duration = sample.GetDts();
             double fps = (double)(interval*(sync_count-1))/((double)duration/(double)cursor->m_Track->GetMediaTimeScale());
             if (Options.verbosity > 0) {
-                printf("found regular I-frame interval: %d frames (at %.3f frames per second)\n",
-                       interval, (float)fps);
+                printf("found regular I-frame interval: %d frames (at %.3f frames per second)\n", interval, (float)fps);
             }
             return (unsigned int)(1000.0*(double)interval/fps);
         }
@@ -1263,7 +1244,8 @@ main(int argc, char** argv)
         fprintf(stderr, "ERROR: no movie found in the file\n");
         return 1;
     }
-    if (!quiet && input_file.GetMovie()->HasFragments()) {
+    bool input_frag = input_file.GetMovie()->HasFragments();
+    if (!quiet && input_frag) {
         fprintf(stderr, "NOTICE: file is already fragmented, it will be re-fragmented\n");
     }
     
@@ -1284,14 +1266,14 @@ main(int argc, char** argv)
         AP4_Track* track = track_item->GetData();
 
         // sanity check
-        if (track->GetSampleCount() == 0 && !input_file.GetMovie()->HasFragments()) {
+        if (track->GetSampleCount() == 0 && !input_frag) {
             fprintf(stderr, "WARNING: track %d has no samples, it will be skipped\n", track->GetId());
             continue;
         }
 
         // create a sample array for this track
         SampleArray* sample_array;
-        if (input_file.GetMovie()->HasFragments()) {
+        if (input_frag) {
             sample_array = new CachedSampleArray(track);
         } else {
             sample_array = new SampleArray(track);
@@ -1386,7 +1368,7 @@ main(int argc, char** argv)
     input_stream->Tell(position);
 
     // for fragmented input files, we need to populate the sample arrays
-    if (input_file.GetMovie()->HasFragments()) {
+    if (input_frag) {
         AP4_LinearReader reader(*input_file.GetMovie(), input_stream);
         for (unsigned int i=0; i<cursors.ItemCount(); i++) {
             reader.EnableTrack(cursors[i]->m_Track->GetId());
@@ -1440,7 +1422,7 @@ main(int argc, char** argv)
     if (auto_detect_fragment_duration) {
         if (video_track) {
             fragment_duration = AutoDetectFragmentDuration(video_track);
-        } else if (audio_track && input_file.GetMovie()->HasFragments()) {
+        } else if (audio_track && input_frag) {
             fragment_duration = AutoDetectAudioFragmentDuration(*input_stream, audio_track);
         }
         if (fragment_duration == 0) {

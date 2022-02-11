@@ -102,6 +102,7 @@ AP4_SegmentBuilder::WriteMediaSegment(AP4_ByteStream& stream, unsigned int seque
     AP4_ContainerAtom* moof = new AP4_ContainerAtom(AP4_ATOM_TYPE_MOOF);
     AP4_MfhdAtom* mfhd = new AP4_MfhdAtom(sequence_number);
     moof->AddChild(mfhd);
+
     AP4_ContainerAtom* traf = new AP4_ContainerAtom(AP4_ATOM_TYPE_TRAF);
     AP4_TfhdAtom* tfhd = new AP4_TfhdAtom(tfhd_flags,
                                           m_TrackId,
@@ -113,10 +114,11 @@ AP4_SegmentBuilder::WriteMediaSegment(AP4_ByteStream& stream, unsigned int seque
     if (tfhd_flags & AP4_TFHD_FLAG_DEFAULT_SAMPLE_FLAGS_PRESENT) {
         tfhd->SetDefaultSampleFlags(0x1010000); // sample_is_non_sync_sample=1, sample_depends_on=1 (not I frame)
     }
-    
     traf->AddChild(tfhd);
+
     AP4_TfdtAtom* tfdt = new AP4_TfdtAtom(1, m_MediaTimeOrigin+m_MediaStartTime);
     traf->AddChild(tfdt);
+
     AP4_UI32 trun_flags = AP4_TRUN_FLAG_DATA_OFFSET_PRESENT     |
                           AP4_TRUN_FLAG_SAMPLE_DURATION_PRESENT |
                           AP4_TRUN_FLAG_SAMPLE_SIZE_PRESENT;
@@ -126,8 +128,8 @@ AP4_SegmentBuilder::WriteMediaSegment(AP4_ByteStream& stream, unsigned int seque
         first_sample_flags = 0x2000000; // sample_depends_on=2 (I frame)
     }
     AP4_TrunAtom* trun = new AP4_TrunAtom(trun_flags, 0, first_sample_flags);
-    
     traf->AddChild(trun);
+
     moof->AddChild(traf);
     
     // add samples to the fragment
@@ -528,7 +530,7 @@ AP4_HevcSegmentBuilder::Feed(const void* data,
         // compute the total size of the sample data
         unsigned int sample_data_size = 0;
         for (unsigned int i=0; i<access_unit_info.nal_units.ItemCount(); i++) {
-            sample_data_size += 4+access_unit_info.nal_units[i]->GetDataSize();
+            sample_data_size += 4 + access_unit_info.nal_units[i]->GetDataSize();
         }
         
         // format the sample data
