@@ -106,6 +106,8 @@ const AP4_UI32 AP4_SAMPLE_FORMAT_OPUS = AP4_ATOM_TYPE('O','p','u','s');
 const AP4_UI32 AP4_SAMPLE_FORMAT_VP8  = AP4_ATOM_TYPE('v','p','0','8');
 const AP4_UI32 AP4_SAMPLE_FORMAT_VP9  = AP4_ATOM_TYPE('v','p','0','9');
 const AP4_UI32 AP4_SAMPLE_FORMAT_VP10 = AP4_ATOM_TYPE('v','p','1','0');
+const AP4_UI32 AP4_SAMPLE_FORMAT_PCMU = AP4_ATOM_TYPE('u','l','a','w');
+const AP4_UI32 AP4_SAMPLE_FORMAT_PCMA = AP4_ATOM_TYPE('a','l','a','w');
 
 const char*
 AP4_GetFormatName(AP4_UI32 format);
