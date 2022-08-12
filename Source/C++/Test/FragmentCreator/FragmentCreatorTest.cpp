@@ -43,8 +43,8 @@
 int
 main(int argc, char** argv)
 {
-    if (argc != 8) {
-        printf("usage: fragmentcreatortest h265|h264|aac <media-input-filename> <track-id> <frames-per-segment>|<segment-duration> <frames-per-second>|0 <output-media-segment-filename-pattern> <output-init-segment-filename>\n");
+    if (argc < 7) {
+        printf("usage: fragmentcreatortest h265|h264|aac <media-input-filename> <track-id> <frames-per-segment>|<segment-duration> <frames-per-second>|0 <output-init-segment-filename> [<output-media-segment-filename-pattern>]\n");
         return 1;
     }
 
@@ -53,8 +53,14 @@ main(int argc, char** argv)
     unsigned int track_id             = (unsigned int)strtoul(argv[3], NULL, 10);
     double       segment_duration     = strtod(argv[4], NULL);
     double       frames_per_second    = strtod(argv[5], NULL);
-    const char*  output_media_segment_filename_pattern = argv[6];
-    const char*  output_init_segment_filename          = argv[7];
+    printf("track_id=%d segment_duration=%s frames_per_second=%s\n", track_id, argv[4], argv[5]);
+    const char*  output_init_segment_filename = argv[6];
+    const char*  output_media_segment_filename_pattern = nullptr;
+    if (argc == 8) {
+        output_media_segment_filename_pattern = argv[7];
+    }
+    printf("input %s, output %s pattern %s\n", input_filename, output_init_segment_filename, output_media_segment_filename_pattern);
+
     AP4_Result   result;
 
     AP4_ByteStream* input_stream = NULL;
@@ -86,7 +92,14 @@ main(int argc, char** argv)
     
     // create a feeder to read from the input and feed the builder
     AP4_StreamFeeder stream_feeder(input_stream, *feed_builder);
-    
+
+    AP4_ByteStream* init_segment_stream = NULL;
+    result = AP4_FileByteStream::Create(output_init_segment_filename, AP4_FileByteStream::STREAM_MODE_WRITE, init_segment_stream);
+    if (AP4_FAILED(result)) {
+        fprintf(stderr, "ERROR: cannot create init segment file (%d)\n", result);
+        return 1;
+    }
+
     // parse the input until the end of the stream
     unsigned int segment_count = 0;
     bool eos = false;
@@ -115,33 +128,34 @@ main(int argc, char** argv)
             }
         }
         if (flush) {
-            unsigned int max_name_size = (unsigned int)strlen(output_media_segment_filename_pattern)+256;
-            char* media_segment_filename = new char[max_name_size+1];
-            snprintf(media_segment_filename, max_name_size, output_media_segment_filename_pattern, segment_count);
-            AP4_ByteStream* media_segment_stream = NULL;
-            
-            result = AP4_FileByteStream::Create(media_segment_filename, AP4_FileByteStream::STREAM_MODE_WRITE, media_segment_stream);
-            if (AP4_FAILED(result)) {
-                fprintf(stderr, "ERROR: cannot create media segment file (%d)\n", result);
-                return 1;
+            if (segment_count == 0) {
+                feed_builder->WriteInitSegment(*init_segment_stream);
             }
-            
-            feed_builder->WriteMediaSegment(*media_segment_stream, segment_count);
-            
-            delete[] media_segment_filename;
-            media_segment_stream->Release();
+            else if (output_media_segment_filename_pattern) {
+                unsigned int max_name_size = (unsigned int)strlen(output_media_segment_filename_pattern) + 256;
+                char* media_segment_filename = new char[max_name_size + 1];
+                snprintf(media_segment_filename, max_name_size, output_media_segment_filename_pattern, segment_count);
+                AP4_ByteStream* media_segment_stream = NULL;
+                result = AP4_FileByteStream::Create(media_segment_filename, AP4_FileByteStream::STREAM_MODE_WRITE, media_segment_stream);
+                if (AP4_FAILED(result)) {
+                    fprintf(stderr, "ERROR: cannot create media segment file (%d)\n", result);
+                    return 1;
+                }
+
+                feed_builder->WriteMediaSegment(*media_segment_stream, segment_count);
+
+                delete[] media_segment_filename;
+                media_segment_stream->Release();
+            }
+            else {
+                feed_builder->WriteMediaSegment(*init_segment_stream, segment_count);
+            }
             ++segment_count;
         }
     }
 
-    AP4_ByteStream* init_segment_stream = NULL;
-    result = AP4_FileByteStream::Create(output_init_segment_filename, AP4_FileByteStream::STREAM_MODE_WRITE, init_segment_stream);
-    if (AP4_FAILED(result)) {
-        fprintf(stderr, "ERROR: cannot create init segment file (%d)\n", result);
-        return 1;
-    }
-    feed_builder->WriteInitSegment(*init_segment_stream);
     init_segment_stream->Release();
+
     
     // cleanup and exit
     if (input_stream) input_stream->Release();

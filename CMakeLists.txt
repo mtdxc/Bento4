@@ -91,12 +91,22 @@ foreach(app ${BENTO4_APPS})
   list(APPEND BENTO4_APPS_LOWERCASE ${binary_name})
   add_executable(${binary_name} ${SOURCE_ROOT}/Apps/${app}/${app}.cpp)
   target_link_libraries(${binary_name} ap4)
-
+  set_property(TARGET ${binary_name} PROPERTY FOLDER "Ap4App")
   if(MSVC)
     set_property(TARGET ${binary_name} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     target_compile_definitions(${binary_name} PRIVATE -D_CONSOLE)
   endif()
 endforeach()
+
+set(binary_name "FragmentCreator")
+add_executable(${binary_name} ${SOURCE_ROOT}/Test/FragmentCreator/FragmentCreatorTest.cpp)
+target_link_libraries(${binary_name} ap4)
+set_property(TARGET ${binary_name} PROPERTY FOLDER "Ap4App")
+if(MSVC)
+  set_property(TARGET ${binary_name} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  target_compile_definitions(${binary_name} PRIVATE -D_CONSOLE)
+endif()
+
 endif(BUILD_APPS)
 
 # Install

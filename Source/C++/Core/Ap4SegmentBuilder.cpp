@@ -425,10 +425,7 @@ AP4_AvcSegmentBuilder::Feed(const void* data,
         m_SampleOrders.Append(SampleOrder(access_unit_info.decode_order, access_unit_info.display_order));
         
         // free the memory buffers
-        for (unsigned int i=0; i<access_unit_info.nal_units.ItemCount(); i++) {
-            delete access_unit_info.nal_units[i];
-        }
-        access_unit_info.nal_units.Clear();
+        access_unit_info.Reset();
         
         return 1; // one access unit returned
     }
